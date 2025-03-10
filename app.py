@@ -4,6 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from datetime import datetime
 import time
+import os
 
 def log_message(message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -13,14 +14,19 @@ class ChatBot:
     def __init__(self):
         self.model = None
         self.tokenizer = None
+        self.offload_dir = "model_offload"  # Directory for model offloading
     
     def load_model(self):
         if self.model is None:
+            # Create offload directory if it doesn't exist
+            os.makedirs(self.offload_dir, exist_ok=True)
+            
             log_message("Loading base model and tokenizer...")
             base_model = AutoModelForCausalLM.from_pretrained(
                 "microsoft/phi-2",
                 device_map="auto",
-                trust_remote_code=True
+                trust_remote_code=True,
+                offload_folder=self.offload_dir  # Specify offload directory
             )
             self.tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2", trust_remote_code=True)
             
@@ -28,7 +34,8 @@ class ChatBot:
             self.model = PeftModel.from_pretrained(
                 base_model,
                 "phi2-finetuned/checkpoint-8928",
-                device_map="auto"
+                device_map="auto",
+                offload_folder=self.offload_dir  # Specify offload directory
             )
             log_message("Model loaded successfully!")
     
